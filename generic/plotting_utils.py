@@ -5,7 +5,7 @@ missing values and more.
 
 import numpy as np
 import pandas as pd
-# from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.mplot3d import Axes3D
 import scipy.cluster.hierarchy as sch
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -56,7 +56,7 @@ def plot_missing_values(data, save_fig=False):
         figure.savefig("Figures/missing_values.eps", format='eps')
 
 
-def plot_correlation_matrix(data):
+def plot_correlation_matrix(data, save_fig=False):
     """
     Plot correlation matrix between numeric features- in our case all features are numeric.
     :param data: Our data
@@ -64,8 +64,12 @@ def plot_correlation_matrix(data):
     """
     fig, ax = plt.subplots(figsize=(10, 10))
     ax.set_title("Correlation Matrix Between Numeric Features", y=1.03)
-    sns.heatmap(data.corr(), annot=True, cmap='twilight', xticklabels=data.columns, yticklabels=data.columns)
-    plt.xticks(rotation=40)
+    sns.heatmap(data.corr(), annot=False, cmap='twilight', xticklabels=data.columns, yticklabels=data.columns)
+    plt.xticks(rotation=90)
+    if save_fig:
+        fig.savefig("Figures/correlation_matrix.svg", format='svg')
+        plt.close(fig)
+        return
     plt.show()
 
 
@@ -129,4 +133,95 @@ def do_boxplot(data):
     sns.boxplot(data=scaled_df)
     plt.xticks(rotation=20, ha='right')
     plt.tight_layout()
+    plt.show()
+
+
+
+def plot_dim_reduction(pca_df,target_column= None, save_fig=False, fig_name = None, method = 'PCA'):
+    '''
+    Plots pca analysis via scatter plot for 2d/3d data.
+    Args:
+        pca_df (pd.DataFrame): Data frame with PCA results
+        target_column (str): Column name of the target column
+        save_fig (bool): Save the figure
+        fig_name (str): Name of the figure
+        method (str): method type ('pca','tsne')
+    Returns:
+        None: plot the PCA results/ save the figure'''
+    components = pca_df.columns
+    n_components = len(components)
+    if target_column:
+        if target_column not in pca_df.columns:
+            raise ValueError("Target column is not in the data frame")
+        n_components -= 1
+    if method.lower() == 'pca':
+        method = 'PCA'
+        data_prefix = 'PC'
+        explanation_prefix = 'Prinicipal Component'
+    elif method.lower() == "tsne":
+        method = 't-SNE'
+        data_prefix = 'Dim'    
+        explanation_prefix = 'Dimension'
+    else: 
+        raise ValueError("Method is not supported")
+    
+    if n_components == 2:
+        plot_2d_scatter(pca_df,target_column, save_fig, fig_name, method, data_prefix, explanation_prefix)
+    elif n_components == 3:
+        plot_3d_scatter(pca_df,target_column, save_fig, fig_name, method, data_prefix, explanation_prefix)
+    else:
+        raise ValueError("Number of components is not supported for plotting")
+
+def plot_2d_scatter(pca_df,target_column= None, save_fig=False, fig_name = None,
+                     method = 'PCA', prefix = 'PC', explanation_prefix = 'Prinicipal Component'):
+    '''
+    Plot PCA analysis with marked samples from the target column if given
+    Args:
+        pca_df (pd.DataFrame): Data frame with PCA results
+        target_column (str): Column name of the target column
+        save_fig (bool): Save the figure
+        fig_name (str): Name of the figure
+        method (str): method type ('pca','tsne') 
+        prefix (str): ('PC','Dim') 
+    Returns:
+        None: plot the PCA results
+    '''
+    plt.figure(figsize=(8, 6))
+    plt.scatter(pca_df[f'{prefix}1'], pca_df[f'{prefix}2'],
+                 c=pca_df[target_column] if target_column in pca_df.columns else None, cmap='viridis', alpha=0.7)
+    plt.title(f'{method} Result')
+    plt.xlabel(f'{explanation_prefix} 1')
+    plt.ylabel(f'{explanation_prefix} 2')
+    plt.colorbar(label=target_column if target_column in pca_df.columns else 'None')
+    if save_fig:
+        output_path = f"Figures/{method}_results_2d.svg"
+        if fig_name:
+            output_path = f"Figures/{method}_results_2d_{fig_name}.svg"
+        plt.savefig(output_path, format='svg')
+        plt.close()
+        return
+    plt.show()
+
+def plot_3d_scatter(pca_df, target_column = None, save_fig = False, fig_name=None, 
+                    method = 'PCA', prefix = 'PC', explanation_prefix = 'Prinicipal Component'):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    # Plot data
+    scatter = ax.scatter(pca_df[f'{prefix}1'], pca_df[f'{prefix}2'],pca_df[f'{prefix}3'], 
+                         c=pca_df[target_column] if target_column in pca_df.columns else None, cmap='viridis', alpha=0.7)
+    # Labels and title
+    ax.set_xlabel(f'{explanation_prefix} 1')
+    ax.set_ylabel(f'{explanation_prefix} 2')
+    ax.set_zlabel(f'{explanation_prefix} 3')
+    ax.set_title(f'{method} Result')
+    
+    fig.colorbar(scatter, ax=ax, label=target_column if target_column in pca_df.columns else 'None')
+
+    if save_fig:
+        output_path = f"Figures/{method}_results_3d.svg"
+        if fig_name:
+            output_path = f"Figures/{method}_results_3d_{fig_name}.svg"
+        plt.savefig(output_path, format='svg')
+        plt.close()
+        return
     plt.show()
