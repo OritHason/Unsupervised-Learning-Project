@@ -135,7 +135,19 @@ def do_boxplot(data):
     plt.tight_layout()
     plt.show()
 
-
+def get_method_description(method):
+    if method.lower() == 'pca':
+        method = 'PCA'
+        data_prefix = 'PC'
+        explanation_prefix = 'Prinicipal Component'
+    elif method.lower() == "tsne":
+        method = 't-SNE'
+        data_prefix = 'Dim'    
+        explanation_prefix = 'Dimension'
+    else: 
+        raise ValueError("Method is not supported")
+    
+    return method, data_prefix, explanation_prefix
 
 def plot_dim_reduction(pca_df,target_column= None, save_fig=False, fig_name = None, method = 'PCA'):
     '''
@@ -154,16 +166,7 @@ def plot_dim_reduction(pca_df,target_column= None, save_fig=False, fig_name = No
         if target_column not in pca_df.columns:
             raise ValueError("Target column is not in the data frame")
         n_components -= 1
-    if method.lower() == 'pca':
-        method = 'PCA'
-        data_prefix = 'PC'
-        explanation_prefix = 'Prinicipal Component'
-    elif method.lower() == "tsne":
-        method = 't-SNE'
-        data_prefix = 'Dim'    
-        explanation_prefix = 'Dimension'
-    else: 
-        raise ValueError("Method is not supported")
+    method,data_prefix,explanation_prefix = get_method_description(method)
     
     if n_components == 2:
         plot_2d_scatter(pca_df,target_column, save_fig, fig_name, method, data_prefix, explanation_prefix)
@@ -225,3 +228,74 @@ def plot_3d_scatter(pca_df, target_column = None, save_fig = False, fig_name=Non
         plt.close()
         return
     plt.show()
+
+def plot_2d_scatter_on_ax(pca_df, target_column=None, save_fig=False, fig_name=None,
+                     method='PCA', prefix='PC', explanation_prefix='Principal Component', ax=None, ax_title=None):
+    '''
+    Plot PCA analysis with marked samples from the target column if given
+    Args:
+        pca_df (pd.DataFrame): Data frame with PCA results
+        target_column (str): Column name of the target column
+        save_fig (bool): Save the figure
+        fig_name (str): Name of the figure
+        method (str): method type ('pca','tsne') 
+        prefix (str): ('PC','Dim') 
+        explanation_prefix (str): Explanation for axis labels
+        ax (matplotlib.axes.Axes): Axes object for subplot
+    Returns:
+        None: plot the PCA results
+    '''
+    if ax is None:
+        ax = plt.gca()  # If no ax provided, get current axis
+    
+    scatter = ax.scatter(pca_df[f'{prefix}1'], pca_df[f'{prefix}2'],
+                         c=pca_df[target_column] if target_column in pca_df.columns else None,
+                         cmap='viridis', alpha=0.7)
+    ax.set_title(f'{ax_title} Result')
+    ax.set_xlabel(f'{explanation_prefix} 1')
+    ax.set_ylabel(f'{explanation_prefix} 2')
+    
+    # Color bar if target_column is present
+    if target_column in pca_df.columns:
+        fig = plt.gcf()
+        cbar = fig.colorbar(scatter, ax=ax)
+        cbar.set_label(target_column)
+
+    # Saving the figure if needed
+    if save_fig:
+        output_path = f"Figures/{method}_results_2d.svg"
+        if fig_name:
+            output_path = f"Figures/{method}_results_2d_{fig_name}.svg"
+        plt.savefig(output_path, format='svg')
+        plt.close()
+        return
+    
+    return ax
+
+def sub_plot_dim(data_list, titles, generall_title,
+                 method='PCA'):
+    method,data_prefix,explanation_prefix = get_method_description(method)
+
+    import math
+    num_plots = len(data_list)
+    num_cols = math.ceil(math.sqrt(num_plots))  # Columns = ceil(sqrt(number of dataframes))
+    num_rows = math.ceil(num_plots / num_cols)  # Rows = ceil(number of dataframes / num_cols)
+
+    # Create the subplots
+    fig, axs = plt.subplots(num_rows, num_cols, figsize=(15, 5))
+
+    # Flatten the axs array for easy iteration if it's a 2D array
+    axs = axs.flatten()
+    
+    for index,(data_tit) in enumerate(zip(data_list,titles)):
+        data_tup,title = data_tit
+        data,target_column = data_tup
+        ax = axs[index]
+        ax = plot_2d_scatter_on_ax(data, target_column=target_column, ax=ax, ax_title=title,
+                                   method=method,prefix=data_prefix, explanation_prefix= explanation_prefix)
+    for j in range(index + 1, len(axs)):
+        axs[j].axis('off')
+
+    plt.tight_layout()  # Adjust layout to avoid overlapping subplots
+    #plt.savefig(f'Figures/{generall_title}.svg', format='svg')
+    plt.savefig(f'Figures/{generall_title}.png', dpi=300, format='png')
