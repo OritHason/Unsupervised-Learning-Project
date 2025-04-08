@@ -149,7 +149,7 @@ def get_method_description(method):
     
     return method, data_prefix, explanation_prefix
 
-def plot_dim_reduction(pca_df,target_column= None, save_fig=False, fig_name = None, method = 'PCA'):
+def plot_dim_reduction(pca_df,target_column= None, labels_dict = None, save_fig=False, fig_name = None, method = 'PCA'):
     '''
     Plots pca analysis via scatter plot for 2d/3d data.
     Args:
@@ -169,13 +169,13 @@ def plot_dim_reduction(pca_df,target_column= None, save_fig=False, fig_name = No
     method,data_prefix,explanation_prefix = get_method_description(method)
     
     if n_components == 2:
-        plot_2d_scatter(pca_df,target_column, save_fig, fig_name, method, data_prefix, explanation_prefix)
+        plot_2d_scatter(pca_df,target_column, labels_dict, save_fig, fig_name, method, data_prefix, explanation_prefix)
     elif n_components == 3:
-        plot_3d_scatter(pca_df,target_column, save_fig, fig_name, method, data_prefix, explanation_prefix)
+        plot_3d_scatter(pca_df,target_column, labels_dict, save_fig, fig_name, method, data_prefix, explanation_prefix)
     else:
         raise ValueError("Number of components is not supported for plotting")
 
-def plot_2d_scatter(pca_df,target_column= None, save_fig=False, fig_name = None,
+def plot_2d_scatter(pca_df,target_column= None, label_dict=None, save_fig=False, fig_name = None,
                      method = 'PCA', prefix = 'PC', explanation_prefix = 'Prinicipal Component'):
     '''
     Plot PCA analysis with marked samples from the target column if given
@@ -195,7 +195,10 @@ def plot_2d_scatter(pca_df,target_column= None, save_fig=False, fig_name = None,
     plt.title(f'{method} Result')
     plt.xlabel(f'{explanation_prefix} 1')
     plt.ylabel(f'{explanation_prefix} 2')
-    plt.colorbar(label=target_column if target_column in pca_df.columns else 'None')
+    if label_dict:
+        plt.colorbar(label=label_dict)
+    else:
+        plt.colorbar(label=target_column if target_column in pca_df.columns else 'None')
     if save_fig:
         output_path = f"Figures/{method}_results_2d.svg"
         if fig_name:
@@ -229,7 +232,7 @@ def plot_3d_scatter(pca_df, target_column = None, save_fig = False, fig_name=Non
         return
     plt.show()
 
-def plot_2d_scatter_on_ax(pca_df, target_column=None, save_fig=False, fig_name=None,
+def plot_2d_scatter_on_ax(pca_df, target_column=None, labels = None, save_fig=False, fig_name=None,
                      method='PCA', prefix='PC', explanation_prefix='Principal Component', ax=None, ax_title=None):
     '''
     Plot PCA analysis with marked samples from the target column if given
@@ -247,9 +250,11 @@ def plot_2d_scatter_on_ax(pca_df, target_column=None, save_fig=False, fig_name=N
     '''
     if ax is None:
         ax = plt.gca()  # If no ax provided, get current axis
+    target_vals = pca_df[target_column] if target_column in pca_df.columns else None
+    
     
     scatter = ax.scatter(pca_df[f'{prefix}1'], pca_df[f'{prefix}2'],
-                         c=pca_df[target_column] if target_column in pca_df.columns else None,
+                         c=target_vals,
                          cmap='viridis', alpha=0.7)
     ax.set_title(f'{ax_title} Result')
     ax.set_xlabel(f'{explanation_prefix} 1')
@@ -259,7 +264,16 @@ def plot_2d_scatter_on_ax(pca_df, target_column=None, save_fig=False, fig_name=N
     if target_column in pca_df.columns:
         fig = plt.gcf()
         cbar = fig.colorbar(scatter, ax=ax)
-        cbar.set_label(target_column)
+        if labels:
+            cbar.set_ticks(range(len(labels)))  # Set ticks for each unique value
+
+
+            try:
+                cbar.set_ticklabels([labels[val] for val in cbar.get_ticks()])
+            except Exception as e:
+                print(labels)
+        else:
+            cbar.set_label(target_column)
 
     # Saving the figure if needed
     if save_fig:
@@ -282,16 +296,16 @@ def sub_plot_dim(data_list, titles, generall_title,
     num_rows = math.ceil(num_plots / num_cols)  # Rows = ceil(number of dataframes / num_cols)
 
     # Create the subplots
-    fig, axs = plt.subplots(num_rows, num_cols, figsize=(15, 5))
+    fig, axs = plt.subplots(num_rows, num_cols, sharex='all',sharey='all',figsize = (3*num_cols,3*num_rows) )
 
     # Flatten the axs array for easy iteration if it's a 2D array
     axs = axs.flatten()
     
     for index,(data_tit) in enumerate(zip(data_list,titles)):
         data_tup,title = data_tit
-        data,target_column = data_tup
+        data,target_column,labels = data_tup
         ax = axs[index]
-        ax = plot_2d_scatter_on_ax(data, target_column=target_column, ax=ax, ax_title=title,
+        ax = plot_2d_scatter_on_ax(data, target_column=target_column,labels=labels, ax=ax, ax_title=title,
                                    method=method,prefix=data_prefix, explanation_prefix= explanation_prefix)
     for j in range(index + 1, len(axs)):
         axs[j].axis('off')
