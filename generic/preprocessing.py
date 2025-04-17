@@ -8,7 +8,7 @@ from sklearn.manifold import TSNE
 
 from prince import MCA
 
-from plotting_utils import sub_plot_dim, plot_dim_reduction
+from plotting_utils import *
 from data_features import *
 
 
@@ -75,6 +75,8 @@ def dealing_with_categorical_features(data, categorical_features, numeric_featur
         numeric_features (list): List of numeric features
     Returns:
         combined_data (pd.DataFrame): Combined data frame with MCA components and numeric features'''
+    if not categorical_features: # empty
+        return data
     encoder = OneHotEncoder(sparse_output=False)
     encoded_categorical = encoder.fit_transform(data[categorical_features])
     encoded_categorical_df = pd.DataFrame(encoded_categorical,
@@ -222,12 +224,52 @@ def reduce_dimenseions_multiple_datasets(data_folder, n_components, method, targ
     if target_column is None:
         target_column = ""
     sub_plot_dim(reduced_dataframes,titles,generall_title=f'All datasets {method} {target_column}',method=method)
-    
-def reduce_dim_for_multiple_targets(data, data_features,  targets,
-                                    n_components, method, data_name, remove_targets = True, wieght_fraction = 1):
+
+
+
+
+
+def plot_catogerial_feature_for_reduced_data(data, data_features_types, target_column, method, 
+                                             n_components, data_name):
     """
-    Reduce dimensions where extracting each target separately.
-    Plots the reduction in the same plot.
+    Plot the data points by each category in the categorial feature.
+    
+    plot_catogerial_feature_for_reduced_data(data,features_in_data,['Remote_Work','Work_Life_Balance','Job_Level'],method,2,data_name)
+
+    """
+    data = load_data(data) if isinstance(data, str) else data
+    if isinstance(target_column,str):
+        target_column = [target_column]
+    target_data_by_col,label_by_col = [], []
+    for target_col in target_column:
+        target_data,labels = convert_categorial_labels_into_numbers(data,target_col)
+        target_data_by_col.append(target_data)
+        label_by_col.append(labels)
+    dim_data,t_,tc_=preprocess_data_for_dim(data,target_column=None,
+                                                                data_features=data_features_types,remove_target=False,wieght_fraction=1)
+    reduced_data = dim_reduction(dim_data, n_components=n_components, method=method)
+    data_by_categoric, titles = [], []
+    for target_data,labels in zip(target_data_by_col,label_by_col):
+        for categoric_number,categoric in labels.items():
+            categoric_indexes = target_data[target_data == categoric_number].index
+            categoric_data = reduced_data.loc[categoric_indexes]
+            data_by_categoric.append(categoric_data)
+            titles.append(categoric)
+    data_by_categoric.append(reduced_data)
+    titles.append('all')
+    sub_plot_dim_categoric(data_by_categoric,titles,generall_title=f'Columns: {target_column} {method} {data_name}',method=method)
+    
+
+
+def reduce_dim_for_multiple_targets(data, data_features,  targets,
+                                    n_components, method, data_name, remove_targets = True, wieght_fraction = 1,
+                                      exteranl_targets=None, external_data = None):
+    """
+    Reduce dimensions to the using reduction method and plot it on 2d.
+    Plot the data points by each feature the target list.
+    If remove_targets is True, remove the wanted targets from the data before the dim reduction.
+    Plots by all targets in the same plots - each feature a subplot.
+    
     Args:
         data (pd.DataFrame/path): Data frame.
         data_features (dict): Data features.
@@ -249,13 +291,19 @@ def reduce_dim_for_multiple_targets(data, data_features,  targets,
                 target_data = data[target_col]
             target_data,labels_col = convert_categorial_labels_into_numbers(target_data,target_col)
             all_targets_data_and_labels.append((target_data,target_col,labels_col))
+        if exteranl_targets is not None:
+            targets = targets + exteranl_targets
+            for target_col in exteranl_targets:
+                target_data = external_data[target_col]
+                target_data,labels_col = convert_categorial_labels_into_numbers(target_data,target_col)
+                all_targets_data_and_labels.append((target_data,target_col,labels_col))
         if method == 'tsne':
             perplexity = 10
         else: perplexity=None   
         reduced_data = dim_reduction(dim_data, n_components=2, method=method)
         all_reduced_data = [(add_target_data(reduced_data,target_data,target_column),target_column,labels_col) for target_data,target_column,labels_col in all_targets_data_and_labels]
         
-        sub_plot_dim(all_reduced_data,targets,generall_title=f'All targets {method} {data_name} ',method=method)
+        sub_plot_dim(all_reduced_data,targets,generall_title=f'All targets {method} {data_name} without cato',method=method)
         return
 
                                                                 
@@ -337,38 +385,43 @@ def convert_categorial_labels_into_numbers(data, column):
     target_vals = target_vals.map(labels)
     labels = {v: k for k, v in labels.items()}
     return target_vals,labels
-def main_working_data():
+def main_working_data(return_target_column = False):
     """
     Return the working data as a tuple of 2 data frames:
-    (reduced dimension data, preprocessed data)"""
+    (reduced dimension data, preprocessed data)
+    """
     data_name = 'Working data'
-    data = load_data("/home/alon/Unsupervised learning/Unsupervised-Learning-Project/Datasets/corporate_work_hours_productivity.csv")
-    data = remove_features_from_data(data,work_features_to_remove)
+    data,features_in_data = get_working_data()
     targets = data.columns.tolist()
-    method = 'pca'    
-    features_in_data = get_features_in_data(data.columns, work_features)
+    method = 'tsne'    
     
-    data = transform_age_to_categorial(data, 'Age')
-    features_in_data['Age'] = FeatureType.CATEGORY
-    #reduce_dim_for_multiple_targets(data,features_in_data,targets,2,method,data_name,remove_targets=False)
-    # target_col = 'Remote_Work'
-    dim_data,target_data,target_columns=preprocess_data_for_dim(data,target_column=None,
-                                                                data_features=features_in_data,remove_target=False)
-    # target_data,labels = convert_categorial_labels_into_numbers(target_data,target_col)
-    reduced_data = dim_reduction(dim_data, n_components=2, method=method)
-    return reduced_data, dim_data
-    # reduced_data = add_target_data(reduced_data,target_data,target_columns)
-    # plot_dim_reduction(reduced_data,target_column=target_col,labels_dict=labels,save_fig=True,fig_name=f'{data_name}_{target_col}',method=method)
+    
+    targets_to_remove = ['Remote_Work','Work_Life_Balance','Job_Level']
+    targets_data = data[targets_to_remove]
+    data = remove_features_from_data(data, targets_to_remove)
+    targets = [target for target in targets if target not in targets_to_remove]
+    for target in targets_to_remove:
+        if target in features_in_data:
+            features_in_data.pop(target)
+    reduce_dim_for_multiple_targets(data,features_in_data,targets,2,method,data_name,remove_targets=False,
+                                    external_data=targets_data,exteranl_targets=targets_to_remove)
+    
 def main_korea_data():
     data_name = 'korea_data'
     data = load_data("/home/alon/Unsupervised learning/archive/2020.csv")
     data = remove_features_from_data(data,korea_features_to_remove)
-    method = 'tsne'
+    method = 'pca'
     features_in_data = get_features_in_data(data.columns, korea_features)
     targets = data.columns.tolist()
     reduce_dim_for_multiple_targets(data,features_in_data,targets,2,method,data_name,remove_targets=False, wieght_fraction=0.03)
  
-
+def get_working_data():
+    data = load_data("/home/alon/Unsupervised learning/Unsupervised-Learning-Project/Datasets/corporate_work_hours_productivity.csv")
+    data = remove_features_from_data(data,work_features_to_remove)
+    features_in_data = get_features_in_data(data.columns, work_features)
+    data = transform_age_to_categorial(data, 'Age')
+    features_in_data['Age'] = FeatureType.CATEGORY
+    return data,features_in_data
 
 if __name__ == '__main__':
     main_working_data()
