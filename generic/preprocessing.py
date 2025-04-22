@@ -11,7 +11,9 @@ from prince import MCA
 
 from plotting_utils import *
 from data_features import *
-
+data_path = os.path.join(os.getcwd(),'Datasets','corporate_work_hours_productivity.csv')
+if not os.path.exists(data_path):
+    raise FileNotFoundError(f"Data file not found at {data_path}")
 
 def get_features_in_data(columns, global_features):
     feature_in_data = {feature: global_features[feature] for feature in columns if feature in global_features}
@@ -419,7 +421,7 @@ def main_korea_data():
     reduce_dim_for_multiple_targets(data,features_in_data,targets,2,method,data_name,remove_targets=False, wieght_fraction=0.03)
  
 def get_working_data():
-    data = load_data("/home/alon/Unsupervised learning/Unsupervised-Learning-Project/Datasets/corporate_work_hours_productivity.csv")
+    data = load_data(data_path)
     data = remove_features_from_data(data,work_features_to_remove)
     features_in_data = get_features_in_data(data.columns, work_features)
     data = transform_age_to_categorial(data, 'Age')
@@ -444,5 +446,3 @@ def split_data_into_categorical_and_numeric(data, features_in_data):
     
     return [(data[categorical_features],categorical_features),(data[numeric_features],numeric_features)]
 
-if __name__ == '__main__':
-    main_working_data()

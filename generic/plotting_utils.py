@@ -603,21 +603,21 @@ def plot_cluster_crosstab(df, ax=None, title="Cluster Distribution by Category",
         ax.axvline(x=xpos, linestyle='--', color='gray', alpha=0.3)
     
 
-def plot_dual_silhouettes_from_values(ax, sil_values_pca, sil_values_nopca, labels_pca, labels_nopca, n_clusters):
+def plot_dual_silhouettes_from_values(ax, sil_values_pca, sil_values_nopca, labels_pca, labels_nopca):
     pca_color = 'skyblue'  # Color for PCA clusters
     nopca_color = 'lightcoral'  # Color for No PCA clusters
 
     y_lower = 10
     ax.set_xlim([-1, 1])
     ax.set_ylim([0, 2 * len(sil_values_pca) + 20])  # Assuming same len for both
-
+    n_clusters = set(labels_pca).union(set(labels_nopca))  # Unique cluster labels
     # Loop over PCA and No PCA values
     for idx, (sil_values, labels, title, offset, color) in enumerate([
         (sil_values_pca, labels_pca, "PCA", 0, pca_color),
         (sil_values_nopca, labels_nopca, "No PCA", len(sil_values_pca) + 10, nopca_color)
     ]):
         y_lower = offset  # Reset y_lower for each plot
-        for i in range(n_clusters):
+        for i in n_clusters:
             cluster_silhouette_vals = sil_values[labels == i]
             cluster_silhouette_vals.sort()
             size_cluster_i = cluster_silhouette_vals.shape[0]

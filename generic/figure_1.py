@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 from preprocessing import *
 
 from plotting_utils import plot_2d_scatter_on_ax
-from clustering import gmm
+from clustering import cluster
 import os
 
 
@@ -35,6 +35,9 @@ axes.append(fig.add_subplot(gs[3, 0]))    # I
 axes.append(fig.add_subplot(gs[3, 1]))    # J
 axes.append(fig.add_subplot(gs[3, 2]))    # K
 a1, a2, a3, a4, a5, a6, a7,a8,a9,a10,a11 = axes
+
+#cluster_method = 'hierarchical'
+cluster_method = 'gmm'
 def plot_figure_1():
     """
     1,1 - A pca
@@ -93,12 +96,11 @@ def plot_figure_1():
     
     for data_,name_,label_,ax in zip(datas,names,labels,axes[8:]):
         labels_ = data[label_]
-        #cluster_labels_hirearchial = hirearchial_clustering(data=data_,n_clusters=3,only_labels=True)
-        cluster_labels_gmm = gmm(data=data_,n_clusters=3)
-        #merged_data_h = pd.DataFrame({'cluster_labels': cluster_labels_hirearchial, 'other_labels': labels_})
-        merged_data_g = pd.DataFrame({'cluster_labels': cluster_labels_gmm, 'other_labels': labels_})
-        #print(f'{name_}, hirechial:\n',pd.crosstab(merged_data_h['cluster_labels'], merged_data_h['other_labels'], normalize='index'))
-        cross_tab=pd.crosstab(merged_data_g['cluster_labels'], merged_data_g['other_labels'], normalize='index')
+        clusters_labels = cluster(data=data_,method=cluster_method,n_clusters=3)
+        
+        merged_data = pd.DataFrame({'cluster_labels': clusters_labels, 'other_labels': labels_})
+        
+        cross_tab=pd.crosstab(merged_data['cluster_labels'], merged_data['other_labels'], normalize='index')
         plot_cluster_crosstab(df=cross_tab,ax=ax,title=name_)
 
 plot_figure_1()
@@ -112,5 +114,6 @@ for ax, label in zip(axes, labels):
 out_dir = 'Figures'
 if not os.path.exists(out_dir):
     os.makedirs(out_dir)
+output_path = os.path.join(out_dir, f'Fig_1_{cluster_method}.pdf')
 
-plt.savefig(f'{out_dir}/Fig_1.pdf', bbox_inches="tight", pad_inches=0.2)
+plt.savefig(output_path, bbox_inches="tight", pad_inches=0.2)

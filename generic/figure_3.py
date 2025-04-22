@@ -3,13 +3,15 @@ from clustering import *
 from plotting_utils import *
 from preprocessing import *
 import string
+cluster_method = 'gmm'
+#cluster_method = 'hierarchical'
 feature_order_numeric = ['Meetings_per_Week', 'Job_Satisfaction', 'Tasks_Completed_Per_Day',
                  'Productivity_Score', 'Annual_Salary','Absences_Per_Year',
                  'Monthly_Hours_Worked','Overtime_Hours_Per_Week','Years_at_Company'
                  ]
 
-categorical_anova_path = os.path.join('Statistics','Working data_with_categorical_reduced_gmm_anova_results.csv')
-without_categorical_anova_path = os.path.join('Statistics','Working data_without_categorical_reduced_gmm_anova_results.csv')
+categorical_anova_path = os.path.join('Statistics',f'Working data_with_categorical_reduced_{cluster_method}_anova_results.csv')
+without_categorical_anova_path = os.path.join('Statistics',f'Working data_without_categorical_reduced_{cluster_method}_anova_results.csv')
 fig = plt.figure(figsize=(9,12))
 
 # Subplot layout (manual with GridSpec for flexibility)
@@ -35,22 +37,22 @@ axes.append(fig.add_subplot(gs[2, 2]))    # I
 
 if not os.path.exists(categorical_anova_path):
     print("Anova results files are not found for all features. Running anova analysis first.")
-    analyze_feature_diffrintiation_per_cluster(cluster_method='gmm',num_clusters=3,
+    analyze_feature_diffrintiation_per_cluster(cluster_method=cluster_method,num_clusters=3,
                                         data_name='Working data',remove_categorical=False,remove_remote_work=True)
 if not os.path.exists(without_categorical_anova_path):
     print("Anova results files are not found for numeric features. Running anova analysis first.")
-    analyze_feature_diffrintiation_per_cluster(cluster_method='gmm',num_clusters=3,
+    analyze_feature_diffrintiation_per_cluster(cluster_method=cluster_method,num_clusters=3,
                                         data_name='Working data',remove_categorical=True,remove_remote_work=True)
 args = analyze_feature_diffriniation_both_cato_no_cato(categorical_anova_path=categorical_anova_path,
                                                         no_categorical_anova_path=without_categorical_anova_path,
-                                                        remove_remote_work=True)
+                                                        remove_remote_work=True,cluster_method=cluster_method)
 features_order = feature_order_numeric 
 if not os.path.exists('Figures'):
     try:
         os.makedirs('Figures')
     except OSError as e:
         print(f"Error creating directory: {e}")
-output_path = os.path.join('Figures', 'Fig_3.pdf')
+output_path = os.path.join('Figures', f'Fig_3_{cluster_method}.pdf')
 plot_box_cluster_together(*args,feature_order=features_order,axes=axes,fig=fig)
 
 

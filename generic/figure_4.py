@@ -4,7 +4,8 @@ from plotting_utils import *
 from preprocessing import *
 import string
 
-
+#cluster_method = 'hierarchical'
+cluster_method = 'gmm'
 
 def plot_pca_feature_contribution(ax=None):
     ## get working data blala
@@ -36,7 +37,7 @@ axes.append(fig.add_subplot(gs[2:, 2:]))    # D
 
 def plot_figure_4():
     
-    args = analyze_feature_diffriniation_both_cato_no_cato(remove_remote_work=True)
+    args = analyze_feature_diffriniation_both_cato_no_cato(remove_remote_work=True,cluster_method=cluster_method)
     dim_reduced_data_numeric = args[1]
     dim_reduced_data_numeric.drop(columns=['PC1','PC2'],inplace=True)
     clusters = dim_reduced_data_numeric.groupby('cluster_labels')
@@ -52,7 +53,7 @@ def plot_figure_4():
             os.makedirs('Figures')
         except OSError as e:
             print(f"Error creating directory: {e}")
-    output_path = os.path.join('Figures', 'Fig_4.pdf')
+    output_path = os.path.join('Figures', f'Fig_4_{cluster_method}.pdf')
 
 
 

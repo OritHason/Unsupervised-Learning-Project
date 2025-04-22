@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from preprocessing import *
 import numpy as np
 import pandas as pd
-def hirearchial_clustering(data, method='ward', metric='euclidean',n_clusters=3,only_labels=False):
+def hirearchial_clustering(data, method='ward', metric='euclidean',n_clusters=3,only_labels=True,random_state=None):
     Z = linkage(data, method=method)
     clusters = fcluster(Z, n_clusters, criterion='maxclust')
     if only_labels:
@@ -79,22 +79,8 @@ def compare_intersect_of_cluster(cluster_labels, other_labels):
     summary_data_frame = pd.DataFrame({'max_keys_by_cluster': max_keys_by_cluster, 'max_values_by_cluster': max_values_by_cluster, 'max_keys_by_label': max_keys_by_label, 'max_values_by_label': max_values_by_label})
     return summary_data_frame
 
-def run_compare_intersect():
-    X, X_, target_data =reduce_dimenstion_working_data(True)
-    compare_results = []
-    for i in range(10):
-        clusterer = GaussianMixture(n_components=3, random_state=(i+1)*10)
-        cluster_labels = clusterer.fit_predict(X)
-        compare_results.append(compare_intersect_of_cluster(cluster_labels, target_data))
-    merged_df = pd.concat(compare_results, axis=0)
-    # count how many matches of clustering
-    merged_df.loc['Hybrid']['max_keys_by_cluster']
-    print(merged_df.loc['Hybrid']['max_values_by_cluster'].to_numpy())
 
-    np.array()
-    return compare_results
-
-def analyze_feature_diffriniation_both_cato_no_cato(categorical_anova_path = None, no_categorical_anova_path = None, remove_remote_work = True):
+def analyze_feature_diffriniation_both_cato_no_cato(categorical_anova_path = None, no_categorical_anova_path = None, remove_remote_work = True, cluster_method='gmm'):
     cato_anova = pd.read_csv(categorical_anova_path,index_col='feature') if categorical_anova_path else None
     no_cato_anova = pd.read_csv(no_categorical_anova_path,index_col='feature') if no_categorical_anova_path else None
     data,features_in_data = get_working_data()
@@ -117,8 +103,8 @@ def analyze_feature_diffriniation_both_cato_no_cato(categorical_anova_path = Non
     processed_data_with_cato_ = processed_data_with_cato.copy()
     processed_data_no_categorical = dim_reduction(processed_data_no_categorical, method='pca', n_components=2)
     processed_data_with_cato = dim_reduction(processed_data_with_cato, method='pca', n_components=2)
-    cluster_labels_cato = cluster(processed_data_with_cato, 'gmm', n_clusters=3,random_state=(10 + 324%1))
-    cluster_labels_no_cato = cluster(processed_data_no_categorical, 'gmm', n_clusters=3,random_state=(10 + 324%1))
+    cluster_labels_cato = cluster(processed_data_with_cato, cluster_method, n_clusters=3,random_state=(10 + 324%1))
+    cluster_labels_no_cato = cluster(processed_data_no_categorical, cluster_method, n_clusters=3,random_state=(10 + 324%1))
     processed_data_no_categorical[numeric_features_no_cato] = processed_data_no_categorical_[numeric_features_no_cato]
     processed_data_with_cato[numeric_features_with_cato] = processed_data_with_cato_[numeric_features_with_cato]
     processed_data_no_categorical['cluster_labels'] = cluster_labels_no_cato
@@ -167,8 +153,8 @@ def analyze_feature_diffrintiation_per_cluster(cluster_method, num_clusters, dat
             processed_data[numeric_features] = processed_data_[numeric_features]
         processed_data['cluster_labels'] = cluster_labels
         
-        
-        anova_df = annova_testing(numeric_features, 'cluster_labels', processed_data, num_clusters)   
+        unique_clusters = set(cluster_labels)
+        anova_df = annova_testing(numeric_features, 'cluster_labels', processed_data, unique_clusters)   
         anovas_list.append(anova_df)
     merged_anova = merge_f_oneway_to_dataframe(anovas_list)
     merged_anova_summarized = summarize_merged_annova(merged_anova)
@@ -220,14 +206,14 @@ def annova_testing(numeric_features, cluster_column, data_frame, num_clusters):
         numeric_features (list): list of numeric features to test
         cluster_column (str): name of the column containing the cluster labels
         data_frame (pd.DataFrame): data frame containing the data
-        num_clusters (int): number of clusters
+        num_clusters (list): unique clusters identifiers
     
     Returns:
         pd.DataFrame: data frame containing the F-statistic and p-value for each feature
     """
     annova_df = pd.DataFrame(index=numeric_features, columns=['f_stat', 'p_value'])
     for feature in numeric_features:
-        groups = [data_frame[data_frame[cluster_column] == i][feature] for i in range(num_clusters)]
+        groups = [data_frame[data_frame[cluster_column] == i][feature] for i in num_clusters]
         f_stat, p_value = f_oneway(*groups)  # ANOVA test
         annova_df.loc[feature] = [f_stat, p_value]
     return annova_df
