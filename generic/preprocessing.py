@@ -6,6 +6,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.manifold import TSNE
 
+
 from prince import MCA
 
 from plotting_utils import *
@@ -99,7 +100,7 @@ def dim_reduction(data, n_components, method, **kargs):
     else:
         raise ValueError(f"Error: Method {method} not supported")
 
-def reduce_dimensions_pca(data, n_components):
+def reduce_dimensions_pca(data, n_components, return_pca = False):
     pca = PCA(n_components=n_components)
     principal_components = pca.fit_transform(data)
     pca_df = pd.DataFrame(
@@ -110,7 +111,9 @@ def reduce_dimensions_pca(data, n_components):
     print("\nExplained variance ratio:", pca.explained_variance_ratio_)
     # print("PCA results preview:")
     # print(pca_df.head())
-    return pca_df
+    
+    return pca if return_pca else pca_df
+
 def reduce_dimensions_tsne(data, n_components, perplexity = 30):
     tsne = TSNE(n_components=n_components, perplexity=perplexity, random_state=42, n_iter=1000)
     tsne_results = tsne.fit_transform(data)
@@ -422,6 +425,24 @@ def get_working_data():
     data = transform_age_to_categorial(data, 'Age')
     features_in_data['Age'] = FeatureType.CATEGORY
     return data,features_in_data
+
+
+def split_data_into_categorical_and_numeric(data, features_in_data):
+    """
+    Split data into categorical and numeric features.
+    
+    Args:
+        data (pd.DataFrame): Data frame.
+        features_in_data (dict): Features in data.
+    
+    Returns:
+        list: List of tuples with [categorical_data,feature and numeric_data,feautres].
+    """
+    
+    categorical_features = [feature for feature, feature_type in features_in_data.items() if feature_type == FeatureType.CATEGORY]
+    numeric_features = [feature for feature, feature_type in features_in_data.items() if feature_type == FeatureType.NUMBER]
+    
+    return [(data[categorical_features],categorical_features),(data[numeric_features],numeric_features)]
 
 if __name__ == '__main__':
     main_working_data()

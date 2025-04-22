@@ -5,13 +5,20 @@ from sklearn.cluster import KMeans, DBSCAN
 from sklearn.mixture import GaussianMixture
 from scipy.stats import f_oneway, kruskal
 from sklearn.metrics import silhouette_samples, silhouette_score
+from scipy.cluster.hierarchy import linkage, fcluster
+
 from data_features import FeatureType
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 from preprocessing import *
 import numpy as np
 import pandas as pd
-
+def hirearchial_clustering(data, method='ward', metric='euclidean',n_clusters=3,only_labels=False):
+    Z = linkage(data, method=method)
+    clusters = fcluster(Z, n_clusters, criterion='maxclust')
+    if only_labels:
+        return clusters
+    return Z, clusters
 def cluster(data, method,**kwargs):
     """
     Cluster data with the given method.
@@ -25,6 +32,8 @@ def cluster(data, method,**kwargs):
         return dbscan(data, **kwargs)
     elif method == 'gmm':
         return gmm(data, **kwargs)
+    elif method == 'hierarchical':
+        return hirearchial_clustering(data, **kwargs)
     else:
         raise ValueError(f"Unknown clustering method: {method}")
 def dbscan(data, eps = 0.5, min_samples = 5):
@@ -85,12 +94,14 @@ def run_compare_intersect():
     np.array()
     return compare_results
 
-def analyze_feature_enrichment_both_cato_no_cato():
+def analyze_feature_diffriniation_both_cato_no_cato(categorical_anova_path = None, no_categorical_anova_path = None, remove_remote_work = True):
+    cato_anova = pd.read_csv(categorical_anova_path,index_col='feature') if categorical_anova_path else None
+    no_cato_anova = pd.read_csv(no_categorical_anova_path,index_col='feature') if no_categorical_anova_path else None
     data,features_in_data = get_working_data()
-    remote_work = data['Remote_Work']
+    if remove_remote_work:
+        data = data.drop(columns=['Remote_Work'])
+        features_in_data = {feature: feature_type for feature, feature_type in features_in_data.items() if feature != 'Remote_Work'}
     numeric_features = [feature for feature,feature_type in features_in_data.items() if feature_type == FeatureType.NUMBER]
-    cato_suffix = 'with_categorical'
-    cato_suffix = 'without_categorical'
     categorical_features = [feature for feature,feature_type in features_in_data.items() if feature_type == FeatureType.CATEGORY]
     # remove categorical
     data_no_categorical = remove_features_from_data(data, categorical_features)
@@ -112,23 +123,27 @@ def analyze_feature_enrichment_both_cato_no_cato():
     processed_data_with_cato[numeric_features_with_cato] = processed_data_with_cato_[numeric_features_with_cato]
     processed_data_no_categorical['cluster_labels'] = cluster_labels_no_cato
     processed_data_with_cato['cluster_labels'] = cluster_labels_cato
-    # processed_data_no_categorical['Remote_Work'] = remote_work
-    # processed_data_with_cato['Remote_Work'] = remote_work
-    plot_box_cluster_togther(processed_data_with_cato,processed_data_no_categorical,
-                             numeric_features_with_cato,numeric_features_no_cato,'With categorical','Without categorical')
+    
+    return (processed_data_with_cato,processed_data_no_categorical,numeric_features_with_cato,
+            numeric_features_no_cato,cato_anova,no_cato_anova)
+    
 
 
 
 
-def analyze_feature_enrichment_in_cluster(cluster_method, num_clusters, data_name = '', 
+def analyze_feature_diffrintiation_per_cluster(cluster_method, num_clusters, data_name = '', 
                                            reduce_dim = True, dim_method = 'pca', dim_components = 2,
-                                           random_inits = 1, box_plot = False, histogram=False):
+                                           random_inits = 1,remove_categorical = True, remove_remote_work =True):
     data,features_in_data = get_working_data()
+    # REMOVE REMOTE WORK
+    if remove_remote_work:
+        data = data.drop(columns=['Remote_Work'])
+        features_in_data = {feature: feature_type for feature, feature_type in features_in_data.items() if feature != 'Remote_Work'}
     numeric_features = [feature for feature,feature_type in features_in_data.items() if feature_type == FeatureType.NUMBER]
     cato_suffix = 'with_categorical'
     categorical_features = [feature for feature,feature_type in features_in_data.items() if feature_type == FeatureType.CATEGORY]
     # remove categorical
-    remove_categorical = True
+    
     if remove_categorical:
         data = remove_features_from_data(data, categorical_features)
         features_in_data = {feature: feature_type for feature, feature_type in features_in_data.items() if feature not in categorical_features}
@@ -152,16 +167,12 @@ def analyze_feature_enrichment_in_cluster(cluster_method, num_clusters, data_nam
             processed_data[numeric_features] = processed_data_[numeric_features]
         processed_data['cluster_labels'] = cluster_labels
         
-        if i ==0:
-            box_plot_clustering_data(data=processed_data,cluster_column='cluster_labels',
-                                    numeric_features=numeric_features,save_fig=True,num_clusters=num_clusters,
-                                    method_name=cluster_method, data_name=data_name)
         
-    #     anova_df = annova_testing(numeric_features, 'cluster_labels', processed_data, num_clusters)   
-    #     anovas_list.append(anova_df)
-    # merged_anova = merge_f_oneway_to_dataframe(anovas_list)
-    # merged_anova_summarized = summarize_merged_annova(merged_anova)
-    # merged_anova_summarized.to_csv(os.path.join('Statistics', f'{data_name}_{cluster_method}_anova_results.csv'))
+        anova_df = annova_testing(numeric_features, 'cluster_labels', processed_data, num_clusters)   
+        anovas_list.append(anova_df)
+    merged_anova = merge_f_oneway_to_dataframe(anovas_list)
+    merged_anova_summarized = summarize_merged_annova(merged_anova)
+    merged_anova_summarized.to_csv(os.path.join('Statistics', f'{data_name}_{cluster_method}_anova_results.csv'))
    
 
 def summarize_merged_annova(merged_anova):
@@ -310,6 +321,21 @@ def plot_clustering_with_pca():
 
     plt.show()
 
+
+def get_avg_siloute_score(X, n_clusters = None, method = None,**kwargs):
+    """
+    Get the average silhouette score for the given data and clustering method.
+    Args:
+        X: Data to cluster
+        n_clusters: Number of clusters
+        method: Clustering method to use
+    """
+    if method == 'hierarchical':
+        kwargs['only_labels'] = True
+    cluster_labels = cluster(X, method, n_clusters=n_clusters, **kwargs)
+    avg_siloute = silhouette_score(X, cluster_labels)
+    sample_silhouette_values = silhouette_samples(X, cluster_labels)
+    return (avg_siloute, sample_silhouette_values,cluster_labels)
 def plot_clustering():
     """
     Plot clustering and sillouette for given clustering algorithem
@@ -441,8 +467,8 @@ if __name__ == '__main__':
   
     # l_4 = kmeans(reduced_data, n_clusters=3)
     #plot_clustering()
-    # analyze_feature_enrichment_in_cluster(cluster_method='gmm',num_clusters=3,
-    #                                        data_name='Working data')
-    analyze_feature_enrichment_both_cato_no_cato()
+    analyze_feature_diffrintiation_per_cluster(cluster_method='gmm',num_clusters=3,
+                                           data_name='Working data')
+    analyze_feature_diffriniation_both_cato_no_cato()
     
 

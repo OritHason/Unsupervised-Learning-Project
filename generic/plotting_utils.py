@@ -4,11 +4,9 @@ missing values and more.
 """
 import math
 import matplotlib.patches as mpatches
-
 import numpy as np
+from scipy.cluster.hierarchy import dendrogram
 import pandas as pd
-from mpl_toolkits.mplot3d import Axes3D
-import scipy.cluster.hierarchy as sch
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import MinMaxScaler
@@ -57,21 +55,35 @@ def plot_missing_values(data, save_fig=False):
         figure.savefig("Figures/missing_values.eps", format='eps')
 
 
-def plot_correlation_matrix(data, save_fig=False):
+def plot_correlation_matrix(data, save_fig=False, ax=None, ax_title=None,show_ticks=True):
     """
     Plot correlation matrix between numeric features- in our case all features are numeric.
     :param data: Our data
     :return: Correlation matrix plot
     """
-    fig, ax = plt.subplots(figsize=(10, 10))
-    ax.set_title("Correlation Matrix Between Numeric Features", y=1.03)
-    sns.heatmap(data.corr(), annot=False, cmap='twilight', xticklabels=data.columns, yticklabels=data.columns)
-    plt.xticks(rotation=90)
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(10, 10))
+        ax_title = "Correlation Matrix Between Numeric Features"
+
+    ax.set_title(ax_title, y=1.03)
+    corr = data.corr()
+    mask = np.zeros_like(corr, dtype=bool)
+    np.fill_diagonal(mask, True)  # Mask the diagonal
+    short_columns = [col.split('_')[0] for col in data.columns]
+
+    sns.heatmap(corr, mask=mask, ax=ax, annot=False, cmap='coolwarm', 
+                xticklabels=short_columns if show_ticks else False, 
+yticklabels=short_columns if show_ticks else False, vmin=-1, vmax=1)
+
+    if show_ticks:
+        ax.tick_params(axis='x', labelrotation=90)
+    else:
+        ax.tick_params(left=False, bottom=False)  # hide tick marks
+
     if save_fig:
         fig.savefig("Figures/correlation_matrix.svg", format='svg')
         plt.close(fig)
         return
-    plt.show()
 
 def plot_clustered_feature_distributions(data, cluster_column, numeric_features, save_fig=False
                              ,num_clusters = 0,method_name = '', data_name = '', max_cols=4):
@@ -232,36 +244,47 @@ def box_plot_clustering_data(data, cluster_column, numeric_features, save_fig=Fa
         plt.close()
     else:
         plt.show()
-def plot_box_cluster_togther(df1,df2,all_features,subset_features,df1_name,df2_name):
+def plot_box_cluster_together(data_with_categorical, data_without_categorical, 
+                              all_features, subset_features,
+                              with_categorical_anova, without_categorical_anova,
+                              feature_order=None, axes=None, fig=None):
     
     extra_features = list(set(all_features) - set(subset_features))
+    df1_name = 'With categorical'
+    df2_name = 'Without categorical'
 
     # Step 2: Melt subset features from both df1 and df2
-    df1_subset_melt = df1[['cluster_labels'] + subset_features].melt(id_vars='cluster_labels', var_name='feature', value_name='value')
+    df1_subset_melt = data_with_categorical[['cluster_labels'] + subset_features].melt(
+        id_vars='cluster_labels', var_name='feature', value_name='value')
     df1_subset_melt['source'] = df1_name
 
-    df2_subset_melt = df2[['cluster_labels'] + subset_features].melt(id_vars='cluster_labels', var_name='feature', value_name='value')
+    df2_subset_melt = data_without_categorical[['cluster_labels'] + subset_features].melt(
+        id_vars='cluster_labels', var_name='feature', value_name='value')
     df2_subset_melt['source'] = df2_name
 
     # Step 3: Melt extra features only from df1
-    df1_extra_melt = df1[['cluster_labels'] + extra_features].melt(id_vars='cluster_labels', var_name='feature', value_name='value')
+    df1_extra_melt = data_with_categorical[['cluster_labels'] + extra_features].melt(
+        id_vars='cluster_labels', var_name='feature', value_name='value')
     df1_extra_melt['source'] = df1_name
 
     # Step 4: Combine everything into one DataFrame
     combined_all = pd.concat([df1_subset_melt, df2_subset_melt, df1_extra_melt], ignore_index=True)
 
-    # Step 5: Create grid of boxplots
-    all_feature_list = subset_features + extra_features
+    # Use feature_order if provided, else default to subset_features + extra_features
+    all_feature_list = feature_order if feature_order is not None else (subset_features + extra_features)
+    cols=3
     num_features = len(all_feature_list)
-    cols = 3
     rows = math.ceil(num_features / cols)
 
-    fig, axes = plt.subplots(rows, cols, figsize=(6*cols, 5*rows), squeeze=False)
+    # If axes not provided, create them
+    if axes is None or fig is None:
+        fig, axes = plt.subplots(rows, cols, figsize=(6*cols, 5*rows), squeeze=False)
+    else: axes = np.array(axes[:9]).reshape(3, 3)
 
     for i, feature in enumerate(all_feature_list):
         row, col = divmod(i, cols)
         ax = axes[row][col]
-        
+
         sns.boxplot(
             data=combined_all[combined_all['feature'] == feature],
             x='cluster_labels',
@@ -269,27 +292,57 @@ def plot_box_cluster_togther(df1,df2,all_features,subset_features,df1_name,df2_n
             hue='source' if feature in subset_features else None,
             ax=ax
         )
-        
+
+        # Stats and legend patches
+        stats_categorical = with_categorical_anova.loc[feature]
+        f1 = stats_categorical['f_stats_mean']
+        p1 = stats_categorical['p_vals_mean']
+
+        handles = [mpatches.Patch(color=sns.color_palette()[0], label=f'F: {f1:.2g}, P: {p1:.2g}')]
+
+        if feature in subset_features:
+            stats_non_categorical = without_categorical_anova.loc[feature] 
+            f2 = stats_non_categorical['f_stats_mean']
+            p2 = stats_non_categorical['p_vals_mean']
+            handles.append(mpatches.Patch(color=sns.color_palette()[1], label=f'F: {f2:.2g}, P: {p2:.2g}'))
+
+        ax.legend(handles=handles, loc='lower center', bbox_to_anchor=(0.5, -0.1), fontsize=10)
         ax.set_title(f"{feature}")
         ax.set_xlabel("Cluster")
         ax.set_ylabel("Value")
-        if ax.get_legend():
-            ax.legend_.remove()
-        # if feature not in subset_features:
-        #     ax.legend_.remove()  # remove legend for df1-only features
-    
+
+       
+        
+    # Global legend for data source
     df1_patch = mpatches.Patch(color=sns.color_palette()[0], label=df1_name)
     df2_patch = mpatches.Patch(color=sns.color_palette()[1], label=df2_name)
 
-    # Add manual legend
-    fig.legend(handles=[df1_patch, df2_patch], loc='lower center', ncol=2, title='Data type', prop={'size': 14}, title_fontsize='16')
-    # Remove unused subplots
+    fig.legend(handles=[df1_patch, df2_patch], loc='lower center', ncol=2,
+               title='Data type', prop={'size': 14}, title_fontsize='16')
+
+    # Remove unused axes
     for j in range(num_features, rows * cols):
         fig.delaxes(axes[j // cols][j % cols])
-
     plt.tight_layout()
-
-    fig.savefig("Figures/boxplot_clusters.svg", format='svg')
+    plt.subplots_adjust(bottom=0.15)
+    
+def plot_dendogram(Z, ax=None, ax_title=None):
+    """
+    Plot a dendrogram for hierarchical clustering.
+    Args:
+        Z (ndarray): The linkage matrix from hierarchical clustering.
+        ax (matplotlib.axes.Axes): Axes object for subplot.
+        ax_title (str): Title for the axes.
+    Returns:
+        None: plot the dendrogram
+    """
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(10, 5))
+    
+    dendrogram(Z, ax=ax)
+    ax.set_title(ax_title)
+    plt.savefig(f'{ax_title}.png',format='png')  
+    
 def get_method_description(method):
     if method.lower() == 'pca':
         method = 'PCA'
@@ -329,6 +382,43 @@ def plot_dim_reduction(pca_df,target_column= None, labels_dict = None, save_fig=
         plot_3d_scatter(pca_df,target_column, labels_dict, save_fig, fig_name, method, data_prefix, explanation_prefix)
     else:
         raise ValueError("Number of components is not supported for plotting")
+
+def visualise_feature_coeffiecnts_pca(loadings=None, data=None,pca=None, ax =None):
+    if pca is not None:
+        loadings = pd.DataFrame(pca.components_, columns=data.columns, index=["PC1", "PC2"])
+    
+    # Create figure and axis if not provided
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(8, 6))
+    
+    # Plot the arrows and feature names
+    for feature in data.columns:
+        ax.arrow(0, 0,
+                 loadings.loc["PC1", feature],
+                 loadings.loc["PC2", feature],
+                 color='r', alpha=0.5,
+                 head_width=0.02, length_includes_head=True)
+        
+        ax.text(loadings.loc["PC1", feature] * 1.15,
+                loadings.loc["PC2", feature] * 1.15,
+                feature, color='g', ha='center', va='center')
+
+    # Set dynamic axis limits with padding
+    x_max = max(abs(loadings.loc["PC1", :])) * 1.3
+    y_max = max(abs(loadings.loc["PC2", :])) * 1.3
+
+    ax.set_xlim(-x_max, x_max)
+    ax.set_ylim(-y_max, y_max)
+    ax.set_xlabel("PC1")
+    ax.set_ylabel("PC2")
+    ax.set_title("PCA feature contributions")
+    ax.grid(True)
+    ax.axhline(0, color='grey', lw=1)
+    ax.axvline(0, color='grey', lw=1)
+
+
+    
+
 
 def plot_2d_scatter(pca_df,target_column= None, label_dict=None, save_fig=False, fig_name = None,
                      method = 'PCA', prefix = 'PC', explanation_prefix = 'Prinicipal Component'):
@@ -411,7 +501,7 @@ def plot_2d_scatter_on_ax(pca_df, target_column=None, labels = None, save_fig=Fa
     scatter = ax.scatter(pca_df[f'{prefix}1'], pca_df[f'{prefix}2'],
                          c=target_vals,
                          cmap='viridis', alpha=0.7)
-    ax.set_title(f'{ax_title} Result')
+    ax.set_title(ax_title)
     ax.set_xlabel(f'{explanation_prefix} 1')
     ax.set_ylabel(f'{explanation_prefix} 2')
     
@@ -465,6 +555,100 @@ def sub_plot_dim_categoric(data_list, titles, generall_title, method='PCA'):
     path = '/home/alon/Unsupervised learning/Unsupervised-Learning-Project/Figures'
     plt.savefig(f'{path}/{generall_title}.png', dpi=300, format='png')
 
+def plot_cluster_crosstab(df, ax=None, title="Cluster Distribution by Category", colors=None):
+    """
+    Plot a crosstab DataFrame with clusters on the x-axis and grouped bars per category,
+    including zero-value bars for visibility.
+    """
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(8, 5))
+
+    index = df.index.astype(str)
+    categories = df.columns
+    x = np.arange(len(index))  # cluster positions
+    n_categories = len(categories)
+    width = 0.8 / n_categories  # bar width
+
+    if colors is None:
+        colors = plt.cm.Set2.colors
+
+    for i, cat in enumerate(categories):
+        values = df[cat].fillna(0)
+        bar_positions = x + i * width
+        bars = ax.bar(bar_positions, values, width=width, label=cat,
+                      color=colors[i % len(colors)], edgecolor='black')
+
+        for bar in bars:
+            bar_hieght = bar.get_height()
+            if bar_hieght> 0:
+                if bar_hieght < 0.9:
+                    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01,
+                        f'{bar.get_height():.2f}', ha='center', va='bottom', fontsize=8)
+                else:
+                    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() - 0.05,
+                        f'{bar.get_height():.2f}', ha='center', va='bottom', fontsize=8)
+    # Set x-axis ticks
+    ax.set_xticks(x + width * (n_categories - 1) / 2)
+    ax.set_xticklabels(index)
+    ax.set_xlabel("Cluster")
+    ax.set_ylabel("Proportion")
+    ax.set_title(title)
+    ax.set_ylim(0, 1)
+    ax.legend(title="Category",fontsize=6)
+    ax.grid(axis='y', linestyle='--', alpha=0.5)
+
+    # Add vertical grid lines *between* clusters
+    for i in range(1, len(x)):
+        xpos = (x[i] + x[i - 1] + width * (n_categories - 1)) / 2
+        ax.axvline(x=xpos, linestyle='--', color='gray', alpha=0.3)
+    
+
+def plot_dual_silhouettes_from_values(ax, sil_values_pca, sil_values_nopca, labels_pca, labels_nopca, n_clusters):
+    pca_color = 'skyblue'  # Color for PCA clusters
+    nopca_color = 'lightcoral'  # Color for No PCA clusters
+
+    y_lower = 10
+    ax.set_xlim([-1, 1])
+    ax.set_ylim([0, 2 * len(sil_values_pca) + 20])  # Assuming same len for both
+
+    # Loop over PCA and No PCA values
+    for idx, (sil_values, labels, title, offset, color) in enumerate([
+        (sil_values_pca, labels_pca, "PCA", 0, pca_color),
+        (sil_values_nopca, labels_nopca, "No PCA", len(sil_values_pca) + 10, nopca_color)
+    ]):
+        y_lower = offset  # Reset y_lower for each plot
+        for i in range(n_clusters):
+            cluster_silhouette_vals = sil_values[labels == i]
+            cluster_silhouette_vals.sort()
+            size_cluster_i = cluster_silhouette_vals.shape[0]
+
+            y_upper = y_lower + size_cluster_i
+
+            # Fill the area with a single color for all clusters in PCA or No PCA
+            ax.fill_betweenx(
+                np.arange(y_lower, y_upper),
+                0,
+                cluster_silhouette_vals,
+                facecolor=color,
+                edgecolor=color,
+                alpha=0.6,
+                label=f"{title}" if i == 0 else None  # Add label only once in the legend
+            )
+
+            ax.text(-0.05, y_lower + 0.5 * size_cluster_i, f"{i+1}", fontsize=8)
+            y_lower = y_upper + 10  # Spacing between clusters
+
+  
+
+    # Final plot settings
+    ax.set_xlabel("Silhouette coefficient values")
+    ax.set_ylabel("Samples")
+    ax.set_xticks([-1, -0.5, 0, 0.5, 1])
+    ax.set_yticks([])
+    ax.set_title("Silhouette plot")
+
+    # Add legend
+    ax.legend(loc='lower left', fontsize=8)
 def sub_plot_dim(data_list, titles, generall_title,
                  method='PCA'):
     method,data_prefix,explanation_prefix = get_method_description(method)
@@ -492,37 +676,3 @@ def sub_plot_dim(data_list, titles, generall_title,
     #plt.savefig(f'Figures/{generall_title}.svg', format='svg')
     path = '/home/alon/Unsupervised learning/Unsupervised-Learning-Project/Figures'
     plt.savefig(f'{path}/{generall_title}.png', dpi=300, format='png')
-
-def plot_fstats_pvals_summary(df, title):
-    features = df.index.tolist()
-
-    fstats_data = df['f_stats'].tolist()
-    pvals_data = df['p_vals'].tolist()
-
-    fig, axs = plt.subplots(1, 2, figsize=(16, max(6, len(features)*0.6)))
-    
-    # --- Plot F-statistics ---
-    axs[0].boxplot(fstats_data, vert=False, labels=features,showfliers=False)
-    axs[0].set_title("F-statistics per Feature")
-    axs[0].set_xlabel("F-statistic")
-
-    for i, stats in enumerate(fstats_data):
-        mean = np.mean(stats)
-        median = np.median(stats)
-        std = np.std(stats)
-        axs[0].text(mean, i + 1.1, f"μ={mean:.2f}, 𝑥̃={median:.2f}, σ={std:.2f}", fontsize=9, color='blue')
-
-    # --- Plot P-values ---
-    axs[1].boxplot(pvals_data, vert=False, labels=features,showfliers=False)
-    axs[1].set_title("P-values per Feature")
-    axs[1].set_xlabel("P-value")
-
-    for i, stats in enumerate(pvals_data):
-        mean = np.mean(stats)
-        median = np.median(stats)
-        std = np.std(stats)
-        axs[1].text(mean, i + 1.1, f"μ={mean:.3f}, 𝑥̃={median:.3f}, σ={std:.3f}", fontsize=9, color='green')
-
-    plt.tight_layout()
-    fig_name = f'{title}.png'
-    fig.savefig(os.path.join('Figures',fig_name), format='png', bbox_inches='tight')
