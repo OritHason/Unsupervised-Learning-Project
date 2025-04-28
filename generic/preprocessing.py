@@ -1,16 +1,15 @@
 import pandas as pd
-import os
+from prince import MCA
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.manifold import TSNE
 
+from generic.plotting_utils import *
+from generic.data_features import *
 
-from prince import MCA
 
-from plotting_utils import *
-from data_features import *
 data_path = os.path.join(os.getcwd(),'Datasets','corporate_work_hours_productivity.csv')
 if not os.path.exists(data_path):
     raise FileNotFoundError(f"Data file not found at {data_path}")
@@ -78,7 +77,7 @@ def dealing_with_categorical_features(data, categorical_features, numeric_featur
         numeric_features (list): List of numeric features
     Returns:
         combined_data (pd.DataFrame): Combined data frame with MCA components and numeric features'''
-    if not categorical_features: # empty
+    if not categorical_features:
         return data
     encoder = OneHotEncoder(sparse_output=False)
     encoded_categorical = encoder.fit_transform(data[categorical_features])
@@ -137,8 +136,6 @@ def reduce_dimensions_mca(data, n_components):
 def load_data(file_path):
     
     data = pd.read_csv(file_path)
-    # print("Data preview:")
-    # print(data.head())
     return data
 
 def split_data_from_target(data, target_column= None):
@@ -231,16 +228,10 @@ def reduce_dimenseions_multiple_datasets(data_folder, n_components, method, targ
     sub_plot_dim(reduced_dataframes,titles,generall_title=f'All datasets {method} {target_column}',method=method)
 
 
-
-
-
 def plot_catogerial_feature_for_reduced_data(data, data_features_types, target_column, method, 
                                              n_components, data_name):
     """
     Plot the data points by each category in the categorial feature.
-    
-    plot_catogerial_feature_for_reduced_data(data,features_in_data,['Remote_Work','Work_Life_Balance','Job_Level'],method,2,data_name)
-
     """
     data = load_data(data) if isinstance(data, str) else data
     if isinstance(target_column,str):
@@ -264,7 +255,6 @@ def plot_catogerial_feature_for_reduced_data(data, data_features_types, target_c
     titles.append('all')
     sub_plot_dim_categoric(data_by_categoric,titles,generall_title=f'Columns: {target_column} {method} {data_name}',method=method)
     
-
 
 def reduce_dim_for_multiple_targets(data, data_features,  targets,
                                     n_components, method, data_name, remove_targets = True, wieght_fraction = 1,
@@ -353,10 +343,10 @@ def preprocess_data_for_dim(data, target_column, data_features,
         else:
             target = data[joined_column]
             
-    else: target = None
+    else:
+        target = None
     
     categorical_features = [_name for (_name, _type) in features_in_data.items() if _type == FeatureType.CATEGORY]
-
     numeric_features = [_name for (_name, _type) in features_in_data.items() if _type == FeatureType.NUMBER]
     processed_data = dealing_with_categorical_features(data, categorical_features, numeric_features)
 
@@ -365,6 +355,8 @@ def preprocess_data_for_dim(data, target_column, data_features,
     scaled_df = pd.DataFrame(data_scaled, columns=processed_data.columns, index=processed_data.index)
 
     return scaled_df, target, joined_column
+
+
 def transform_age_to_categorial(data, age_column):
     """
     Transform age to categorial feature.
@@ -378,6 +370,8 @@ def transform_age_to_categorial(data, age_column):
     data[age_column] = pd.cut(data[age_column], bins, labels=labels,include_lowest=True)
 
     return data
+
+
 def convert_categorial_labels_into_numbers(data, column):
     """
     Create a mapping dict from categorial features into numbers and vs versa.
@@ -390,7 +384,9 @@ def convert_categorial_labels_into_numbers(data, column):
     target_vals = target_vals.map(labels)
     labels = {v: k for k, v in labels.items()}
     return target_vals,labels
-def main_working_data(return_target_column = False):
+
+
+def main_working_data():
     """
     Return the working data as a tuple of 2 data frames:
     (reduced dimension data, preprocessed data)
@@ -399,8 +395,7 @@ def main_working_data(return_target_column = False):
     data,features_in_data = get_working_data()
     targets = data.columns.tolist()
     method = 'tsne'    
-    
-    
+
     targets_to_remove = ['Remote_Work','Work_Life_Balance','Job_Level']
     targets_data = data[targets_to_remove]
     data = remove_features_from_data(data, targets_to_remove)
@@ -410,15 +405,7 @@ def main_working_data(return_target_column = False):
             features_in_data.pop(target)
     reduce_dim_for_multiple_targets(data,features_in_data,targets,2,method,data_name,remove_targets=False,
                                     external_data=targets_data,exteranl_targets=targets_to_remove)
-    
-def main_korea_data():
-    data_name = 'korea_data'
-    data = load_data("/home/alon/Unsupervised learning/archive/2020.csv")
-    data = remove_features_from_data(data,korea_features_to_remove)
-    method = 'pca'
-    features_in_data = get_features_in_data(data.columns, korea_features)
-    targets = data.columns.tolist()
-    reduce_dim_for_multiple_targets(data,features_in_data,targets,2,method,data_name,remove_targets=False, wieght_fraction=0.03)
+
  
 def get_working_data():
     data = load_data(data_path)

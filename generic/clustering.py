@@ -1,18 +1,13 @@
-"""
-Module to cluster data with different clustering algorithems.
-"""
 from sklearn.cluster import KMeans, DBSCAN
 from sklearn.mixture import GaussianMixture
 from scipy.stats import f_oneway, kruskal
 from sklearn.metrics import silhouette_samples, silhouette_score
 from scipy.cluster.hierarchy import linkage, fcluster
-
-from data_features import FeatureType
-import matplotlib.cm as cm
-import matplotlib.pyplot as plt
-from preprocessing import *
-import numpy as np
 import pandas as pd
+import matplotlib.cm as cm
+
+from generic.preprocessing import *
+
 def hirearchial_clustering(data, method='ward', metric='euclidean',n_clusters=3,only_labels=True,random_state=None):
     Z = linkage(data, method=method)
     clusters = fcluster(Z, n_clusters, criterion='maxclust')
@@ -228,7 +223,7 @@ def kruskal_testing(numeric_features, cluster_column, data_frame, num_clusters):
 
 def plot_clustering_with_pca():
     
-    X, X_ =main_working_data(True)
+    X, X_ =main_working_data()
     target_data = X['Remote_Work']
     X = X.drop(columns=['Remote_Work'])
     clusters = 5

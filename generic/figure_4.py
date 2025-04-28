@@ -1,11 +1,13 @@
-import os
-from clustering import *
-from plotting_utils import *
-from preprocessing import *
 import string
+import matplotlib.gridspec as gridspec
+
+from generic.clustering import *
+from generic.preprocessing import *
+
 
 #cluster_method = 'hierarchical'
 cluster_method = 'gmm'
+
 
 def plot_pca_feature_contribution(ax=None):
     ## get working data blala
@@ -20,10 +22,6 @@ def plot_pca_feature_contribution(ax=None):
 
 
 fig = plt.figure(figsize=(9,9))
-
-# Subplot layout (manual with GridSpec for flexibility)
-import matplotlib.gridspec as gridspec
-
 gs = gridspec.GridSpec(4, 4, figure=fig)  # 3 rows, 3 columns
 axes = []
 axes.append(fig.add_subplot(gs[0:2, 0:2]))  # A
@@ -32,11 +30,7 @@ axes.append(fig.add_subplot(gs[2:, 0:2]))    # C
 axes.append(fig.add_subplot(gs[2:, 2:]))    # D
 
 
-
-
-
 def plot_figure_4():
-    
     args = analyze_feature_diffriniation_both_cato_no_cato(remove_remote_work=True,cluster_method=cluster_method)
     dim_reduced_data_numeric = args[1]
     dim_reduced_data_numeric.drop(columns=['PC1','PC2'],inplace=True)
@@ -55,14 +49,11 @@ def plot_figure_4():
             print(f"Error creating directory: {e}")
     output_path = os.path.join('Figures', f'Fig_4_{cluster_method}.pdf')
 
-
-
     for i,ax in enumerate(axes):
         label = string.ascii_uppercase[i]
         ax.text(-0.1, 1.1, label, transform=ax.transAxes, fontsize=14, fontweight='bold', va='top', ha='left')
     plt.tight_layout(pad=0.5)
     fig.savefig(output_path, format='pdf')
-
 
 
 plot_figure_4()

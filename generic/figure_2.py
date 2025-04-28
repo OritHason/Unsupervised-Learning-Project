@@ -1,16 +1,11 @@
-import os
-from clustering import *
-from data_features import FeatureType
-from plotting_utils import *
-from preprocessing import *
 import string
-
-fig = plt.figure(figsize=(9,12))
-
-    
-# Subplot layout (manual with GridSpec for flexibility)
 import matplotlib.gridspec as gridspec
 
+from generic.clustering import *
+from generic.preprocessing import *
+
+
+fig = plt.figure(figsize=(9,12))
 gs = gridspec.GridSpec(2, 3, figure=fig)  # 3 rows, 3 columns
 
 # 9 box plots 3x3 pictures.
@@ -18,14 +13,14 @@ axes = []
 axes.append(fig.add_subplot(gs[0, 0]))  # A
 axes.append(fig.add_subplot(gs[0, 1]))    # B
 axes.append(fig.add_subplot(gs[0, 2]))    # C
-
 # Second row (3 subplots)
 axes.append(fig.add_subplot(gs[1, 0]))    # D
 axes.append(fig.add_subplot(gs[1, 1]))    # E
 axes.append(fig.add_subplot(gs[1, 2]))    # F
 
-cluster_method = 'gmm'
-#cluster_method = 'hierarchical'
+# cluster_method = 'gmm'
+cluster_method = 'hierarchical'
+
 def plot_figure_2():
     data,features_in_data = get_working_data()
 
@@ -97,11 +92,4 @@ def plot_figure_2():
     fig.savefig(output_path, format='pdf')
 
 
-
-
-
-
-    
-
-    
 plot_figure_2()

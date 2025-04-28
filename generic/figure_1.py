@@ -1,48 +1,39 @@
-from matplotlib import pyplot as plt
+import matplotlib.gridspec as gridspec
 
-from preprocessing import *
-
-from plotting_utils import plot_2d_scatter_on_ax
-from clustering import cluster
-import os
+from generic.preprocessing import *
+from generic.plotting_utils import plot_2d_scatter_on_ax
+from generic.clustering import cluster
 
 
 fig = plt.figure(figsize=(9, 10))
-
-# Subplot layout (manual with GridSpec for flexibility)
-import matplotlib.gridspec as gridspec
-
 gs = gridspec.GridSpec(4, 3, figure=fig)  # 3 rows, 3 columns
-
 # First row (2 subplots)
 axes = []
 axes.append(fig.add_subplot(gs[0, 0:2]))  # A
 axes.append(fig.add_subplot(gs[0, 2]))    # B
-
 # Second row (3 subplots)
 axes.append(fig.add_subplot(gs[1, 0]))    # C
 axes.append(fig.add_subplot(gs[1, 1]))    # D
 axes.append(fig.add_subplot(gs[1, 2]))    # E
-
 # Third row (3 subplots)
 axes.append(fig.add_subplot(gs[2, 0:1]))  # F
 axes.append(fig.add_subplot(gs[2, 1:2]))  # G
 axes.append(fig.add_subplot(gs[2, 2]))    # H
-
-
 # Fourth row (2 subplots)
 axes.append(fig.add_subplot(gs[3, 0]))    # I
 axes.append(fig.add_subplot(gs[3, 1]))    # J
 axes.append(fig.add_subplot(gs[3, 2]))    # K
 a1, a2, a3, a4, a5, a6, a7,a8,a9,a10,a11 = axes
 
-#cluster_method = 'hierarchical'
-cluster_method = 'gmm'
+cluster_method = 'hierarchical'
+# cluster_method = 'gmm'
+
+
 def plot_figure_1():
     """
     1,1 - A pca
     1,2 - B tsne
-    1,1 - C tsne remote work
+    2,1 - C tsne remote work
     2,2 - D tsne work life balance
     2,3 - E tsne job level
     3,1 - F tsne no remote work work life balance
@@ -103,13 +94,12 @@ def plot_figure_1():
         cross_tab=pd.crosstab(merged_data['cluster_labels'], merged_data['other_labels'], normalize='index')
         plot_cluster_crosstab(df=cross_tab,ax=ax,title=name_)
 
-plot_figure_1()
+
 fig.tight_layout(pad=2)
 labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G','H','I','J','K']
 for ax, label in zip(axes, labels):
     ax.text(-0.25, 1.25, label, transform=ax.transAxes,
             fontsize=14, fontweight='bold', va='top', ha='left')
-
 
 out_dir = 'Figures'
 if not os.path.exists(out_dir):
@@ -117,3 +107,5 @@ if not os.path.exists(out_dir):
 output_path = os.path.join(out_dir, f'Fig_1_{cluster_method}.pdf')
 
 plt.savefig(output_path, bbox_inches="tight", pad_inches=0.2)
+
+plot_figure_1()

@@ -1,8 +1,9 @@
-import os
-from clustering import *
-from plotting_utils import *
-from preprocessing import *
 import string
+
+from generic.clustering import *
+from generic.preprocessing import *
+
+
 cluster_method = 'gmm'
 #cluster_method = 'hierarchical'
 feature_order_numeric = ['Meetings_per_Week', 'Job_Satisfaction', 'Tasks_Completed_Per_Day',
@@ -33,32 +34,34 @@ axes.append(fig.add_subplot(gs[1, 2]))    # F
 # Third row (3 subplots)
 axes.append(fig.add_subplot(gs[2, 0]))  # G
 axes.append(fig.add_subplot(gs[2, 1]))  # H
-axes.append(fig.add_subplot(gs[2, 2]))    # I
+axes.append(fig.add_subplot(gs[2, 2]))  # I
 
-if not os.path.exists(categorical_anova_path):
-    print("Anova results files are not found for all features. Running anova analysis first.")
-    analyze_feature_diffrintiation_per_cluster(cluster_method=cluster_method,num_clusters=3,
-                                        data_name='Working data',remove_categorical=False,remove_remote_work=True)
-if not os.path.exists(without_categorical_anova_path):
-    print("Anova results files are not found for numeric features. Running anova analysis first.")
-    analyze_feature_diffrintiation_per_cluster(cluster_method=cluster_method,num_clusters=3,
-                                        data_name='Working data',remove_categorical=True,remove_remote_work=True)
-args = analyze_feature_diffriniation_both_cato_no_cato(categorical_anova_path=categorical_anova_path,
-                                                        no_categorical_anova_path=without_categorical_anova_path,
-                                                        remove_remote_work=True,cluster_method=cluster_method)
-features_order = feature_order_numeric 
-if not os.path.exists('Figures'):
-    try:
-        os.makedirs('Figures')
-    except OSError as e:
-        print(f"Error creating directory: {e}")
-output_path = os.path.join('Figures', f'Fig_3_{cluster_method}.pdf')
-plot_box_cluster_together(*args,feature_order=features_order,axes=axes,fig=fig)
+def plot_figure_3():
+    if not os.path.exists(categorical_anova_path):
+        print("Anova results files are not found for all features. Running anova analysis first.")
+        analyze_feature_diffrintiation_per_cluster(cluster_method=cluster_method,num_clusters=3,
+                                            data_name='Working data',remove_categorical=False,remove_remote_work=True)
+    if not os.path.exists(without_categorical_anova_path):
+        print("Anova results files are not found for numeric features. Running anova analysis first.")
+        analyze_feature_diffrintiation_per_cluster(cluster_method=cluster_method,num_clusters=3,
+                                            data_name='Working data',remove_categorical=True,remove_remote_work=True)
+    args = analyze_feature_diffriniation_both_cato_no_cato(categorical_anova_path=categorical_anova_path,
+                                                            no_categorical_anova_path=without_categorical_anova_path,
+                                                            remove_remote_work=True,cluster_method=cluster_method)
+    features_order = feature_order_numeric
+    if not os.path.exists('Figures'):
+        try:
+            os.makedirs('Figures')
+        except OSError as e:
+            print(f"Error creating directory: {e}")
+    output_path = os.path.join('Figures', f'Fig_3_{cluster_method}.pdf')
+    plot_box_cluster_together(*args,feature_order=features_order,axes=axes,fig=fig)
+
+    for i,ax in enumerate(axes):
+        label = string.ascii_uppercase[i]
+        ax.text(-0.1, 1.1, label, transform=ax.transAxes, fontsize=14, fontweight='bold', va='top', ha='left')
+
+    fig.savefig(output_path, format='pdf')
 
 
-
-for i,ax in enumerate(axes):
-    label = string.ascii_uppercase[i]
-    ax.text(-0.1, 1.1, label, transform=ax.transAxes, fontsize=14, fontweight='bold', va='top', ha='left')
-
-fig.savefig(output_path, format='pdf')
+plot_figure_3()

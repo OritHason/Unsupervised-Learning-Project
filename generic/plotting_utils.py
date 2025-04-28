@@ -496,11 +496,10 @@ def plot_2d_scatter_on_ax(pca_df, target_column=None, labels = None, save_fig=Fa
     if ax is None:
         ax = plt.gca()  # If no ax provided, get current axis
     target_vals = pca_df[target_column] if target_column in pca_df.columns else None
-    
-    
+
     scatter = ax.scatter(pca_df[f'{prefix}1'], pca_df[f'{prefix}2'],
                          c=target_vals,
-                         cmap='viridis', alpha=0.7)
+                         cmap=plt.cm.Set2, alpha=0.7)
     ax.set_title(ax_title)
     ax.set_xlabel(f'{explanation_prefix} 1')
     ax.set_ylabel(f'{explanation_prefix} 2')
@@ -674,5 +673,5 @@ def sub_plot_dim(data_list, titles, generall_title,
 
     plt.tight_layout()  # Adjust layout to avoid overlapping subplots
     #plt.savefig(f'Figures/{generall_title}.svg', format='svg')
-    path = '/home/alon/Unsupervised learning/Unsupervised-Learning-Project/Figures'
+    path = './Figures'
     plt.savefig(f'{path}/{generall_title}.png', dpi=300, format='png')
