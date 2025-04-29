@@ -1,8 +1,9 @@
 import string
 
+# from clustering import *
+# from preprocessing import *
 from generic.clustering import *
 from generic.preprocessing import *
-
 
 cluster_method = 'gmm'
 #cluster_method = 'hierarchical'
@@ -13,6 +14,12 @@ feature_order_numeric = ['Meetings_per_Week', 'Job_Satisfaction', 'Tasks_Complet
 
 categorical_anova_path = os.path.join('Statistics',f'Working data_with_categorical_reduced_{cluster_method}_anova_results.csv')
 without_categorical_anova_path = os.path.join('Statistics',f'Working data_without_categorical_reduced_{cluster_method}_anova_results.csv')
+statistics_path = os.path.join(os.path.dirname(__file__), 'Statistics')
+if not os.path.exists(statistics_path):
+    try:
+        os.makedirs(statistics_path)
+    except OSError as e:
+        print(f"Error creating directory: {e}")
 fig = plt.figure(figsize=(9,12))
 
 # Subplot layout (manual with GridSpec for flexibility)

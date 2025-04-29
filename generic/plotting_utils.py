@@ -306,7 +306,7 @@ def plot_box_cluster_together(data_with_categorical, data_without_categorical,
             p2 = stats_non_categorical['p_vals_mean']
             handles.append(mpatches.Patch(color=sns.color_palette()[1], label=f'F: {f2:.2g}, P: {p2:.2g}'))
 
-        ax.legend(handles=handles, loc='lower center', bbox_to_anchor=(0.5, -0.1), fontsize=10)
+        ax.legend(handles=handles, loc='lower center', bbox_to_anchor=(0.5, -0.03), fontsize=10)
         ax.set_title(f"{feature}")
         ax.set_xlabel("Cluster")
         ax.set_ylabel("Value")
