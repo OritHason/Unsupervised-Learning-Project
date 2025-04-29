@@ -10,7 +10,7 @@ from generic.plotting_utils import *
 from generic.data_features import *
 
 
-data_path = os.path.join(os.getcwd(),'Datasets','corporate_work_hours_productivity.csv')
+data_path = os.path.join(os.getcwd(),'generic','Datasets','corporate_work_hours_productivity.csv')
 if not os.path.exists(data_path):
     raise FileNotFoundError(f"Data file not found at {data_path}")
 

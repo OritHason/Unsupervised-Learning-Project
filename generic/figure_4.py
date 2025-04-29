@@ -5,12 +5,7 @@ from generic.clustering import *
 from generic.preprocessing import *
 
 
-#cluster_method = 'hierarchical'
-cluster_method = 'gmm'
-
-
 def plot_pca_feature_contribution(ax=None):
-    ## get working data blala
     data,features_in_data = get_working_data()
     data = data.drop(columns=['Remote_Work'])
     features_in_data.pop('Remote_Work')
@@ -21,16 +16,17 @@ def plot_pca_feature_contribution(ax=None):
     visualise_feature_coeffiecnts_pca(loadings=None,data=processed,pca=pca,ax=ax)
 
 
-fig = plt.figure(figsize=(9,9))
-gs = gridspec.GridSpec(4, 4, figure=fig)  # 3 rows, 3 columns
-axes = []
-axes.append(fig.add_subplot(gs[0:2, 0:2]))  # A
-axes.append(fig.add_subplot(gs[0:2, 2:]))    # B
-axes.append(fig.add_subplot(gs[2:, 0:2]))    # C
-axes.append(fig.add_subplot(gs[2:, 2:]))    # D
-
-
 def plot_figure_4():
+    # cluster_method = 'hierarchical'
+    cluster_method = 'gmm'
+    fig = plt.figure(figsize=(9, 9))
+    gs = gridspec.GridSpec(4, 4, figure=fig)  # 3 rows, 3 columns
+    axes = []
+    axes.append(fig.add_subplot(gs[0:2, 0:2]))  # A
+    axes.append(fig.add_subplot(gs[0:2, 2:]))  # B
+    axes.append(fig.add_subplot(gs[2:, 0:2]))  # C
+    axes.append(fig.add_subplot(gs[2:, 2:]))  # D
+
     args = analyze_feature_diffriniation_both_cato_no_cato(remove_remote_work=True,cluster_method=cluster_method)
     dim_reduced_data_numeric = args[1]
     dim_reduced_data_numeric.drop(columns=['PC1','PC2'],inplace=True)
@@ -56,4 +52,4 @@ def plot_figure_4():
     fig.savefig(output_path, format='pdf')
 
 
-plot_figure_4()
+# plot_figure_4()

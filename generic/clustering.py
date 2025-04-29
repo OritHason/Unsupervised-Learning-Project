@@ -153,7 +153,7 @@ def analyze_feature_diffrintiation_per_cluster(cluster_method, num_clusters, dat
         anovas_list.append(anova_df)
     merged_anova = merge_f_oneway_to_dataframe(anovas_list)
     merged_anova_summarized = summarize_merged_annova(merged_anova)
-    merged_anova_summarized.to_csv(os.path.join('Statistics', f'{data_name}_{cluster_method}_anova_results.csv'))
+    merged_anova_summarized.to_csv(os.path.join(os.getcwd(),'generic', 'Statistics', f'{data_name}_{cluster_method}_anova_results.csv'))
    
 
 def summarize_merged_annova(merged_anova):

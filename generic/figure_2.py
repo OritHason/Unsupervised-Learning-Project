@@ -4,33 +4,32 @@ from matplotlib.lines import Line2D
 
 from generic.clustering import *
 from generic.preprocessing import *
-# from clustering import *
-# from preprocessing import *
 
-fig = plt.figure(figsize=(9,12))
-gs = gridspec.GridSpec(3, 3, figure=fig)  # 3 rows, 3 columns
-
-# 9 box plots 3x3 pictures.
-axes = [] 
-# Hirearchical clustering
-axes.append(fig.add_subplot(gs[0, 0]))  # A
-axes.append(fig.add_subplot(gs[0, 1]))    # B
-axes.append(fig.add_subplot(gs[0, 2]))    # C
-# Second row (3 subplots)
-# GMM clustering
-axes.append(fig.add_subplot(gs[1, 0]))    # D
-axes.append(fig.add_subplot(gs[1, 1]))    # E
-axes.append(fig.add_subplot(gs[1, 2]))    # F
-
-# Silhouette plots
-axes.append(fig.add_subplot(gs[2, 0]))  # G
-axes.append(fig.add_subplot(gs[2, 1]))  # H
-axes.append(fig.add_subplot(gs[2, 2]))  # I
-
-# cluster_method = 'gmm'
-cluster_method = 'hierarchical'
 
 def plot_figure_2():
+    fig = plt.figure(figsize=(9, 12))
+    gs = gridspec.GridSpec(3, 3, figure=fig)  # 3 rows, 3 columns
+
+    # 9 box plots 3x3 pictures.
+    axes = []
+    # Hirearchical clustering
+    axes.append(fig.add_subplot(gs[0, 0]))  # A
+    axes.append(fig.add_subplot(gs[0, 1]))  # B
+    axes.append(fig.add_subplot(gs[0, 2]))  # C
+    # Second row (3 subplots)
+    # GMM clustering
+    axes.append(fig.add_subplot(gs[1, 0]))  # D
+    axes.append(fig.add_subplot(gs[1, 1]))  # E
+    axes.append(fig.add_subplot(gs[1, 2]))  # F
+
+    # Silhouette plots
+    axes.append(fig.add_subplot(gs[2, 0]))  # G
+    axes.append(fig.add_subplot(gs[2, 1]))  # H
+    axes.append(fig.add_subplot(gs[2, 2]))  # I
+
+    # cluster_method = 'gmm'
+    cluster_method = 'hierarchical'
+
     data,features_in_data = get_working_data()
 
     remote_job_work = ['Remote_Work','Job_Level','Work_Life_Balance']
@@ -138,4 +137,4 @@ def plot_figure_2():
     fig.savefig(output_path, format='pdf')
 
 
-plot_figure_2()
+# plot_figure_2()
